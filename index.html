@@ -30,18 +30,66 @@
         #counter {
             position: absolute;
             top: 80px;
-            left: 50%;
-            transform: translateX(-50%);
+            left: 20px;
+            transform: none;
             z-index: 10;
             pointer-events: none;
         }
         #hint {
             position: absolute;
-            top: 140px;
+            top: 190px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 10;
+            pointer-events: auto;
+        }
+        #photo-pop {
+            position: absolute;
+            left: 250px;
+            top: 55%;
+            transform: translateY(-50%) scale(0.8);
+            opacity: 0;
+            z-index: 11;
             pointer-events: none;
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        #photo-pop.show {
+            opacity: 1;
+            transform: translateY(-50%) scale(1);
+        }
+        #photo-pop img {
+            width: 190px;
+            max-width: 40vw;
+            border-radius: 18px;
+            border: 6px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        #confetti-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 12;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .confetti-piece {
+            position: absolute;
+            top: -10px;
+            width: 10px;
+            height: 14px;
+            border-radius: 3px;
+            opacity: 0.9;
+            animation: confetti-fall 2.6s ease-in forwards;
+        }
+        @keyframes confetti-fall {
+            0% {
+                transform: translateY(-10px) rotate(0deg);
+            }
+            100% {
+                transform: translateY(105vh) rotate(520deg);
+            }
+        }
+        .runaway-button {
+            position: relative;
         }
         .pump {
             cursor: pointer;
@@ -85,15 +133,27 @@
         </h1>
     </div>
     <div id="counter">
-        <p class="text-2xl md:text-3xl font-bold text-pink-500 bg-white bg-opacity-70 px-6 py-2 rounded-full shadow-lg">
+        <p class="text-lg md:text-xl font-bold text-pink-500 bg-white bg-opacity-70 px-4 py-2 rounded-full shadow-lg">
             Klicks: <span id="click-count">0</span> / 15
         </p>
     </div>
     <div id="hint">
-        <p class="text-lg md:text-xl font-bold text-pink-600 bg-white bg-opacity-70 px-5 py-2 rounded-full shadow-lg">
-            Bitte pumpe das Herz auf, damit der Panda glücklich ist
+        <p id="hint-text" class="text-lg md:text-xl font-bold text-pink-600 bg-white bg-opacity-70 px-5 py-2 rounded-full shadow-lg">
+            Der Panda ist traurig, weil er Lara an Valentistag nicht sehen kann :( Könntest du ihm helfen?
         </p>
+        <div class="mt-3 flex items-center justify-center gap-3">
+            <button id="yes-button" class="px-4 py-2 text-sm md:text-base font-bold rounded-full shadow-lg bg-white text-pink-600 hover:bg-pink-50 transition">
+                JA
+            </button>
+            <button id="no-button" class="runaway-button px-4 py-2 text-sm md:text-base font-bold rounded-full shadow-lg bg-white text-pink-600 hover:bg-pink-50 transition">
+                Nein
+            </button>
+        </div>
     </div>
+    <div id="photo-pop">
+        <img src="data/IMG_7859.png" alt="Foto von euch beiden" />
+    </div>
+    <div id="confetti-layer"></div>
 
     <script>
         // Scene setup
@@ -321,34 +381,74 @@
 
         // Create Pump
         const pumpGroup = new THREE.Group();
-        
-        // Pump base
-        const pumpBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.4, 32);
-        const pumpBaseMaterial = new THREE.MeshPhongMaterial({ color: 0xff69b4 });
-        const pumpBase = new THREE.Mesh(pumpBaseGeometry, pumpBaseMaterial);
-        pumpBase.position.y = -1.8;
-        pumpGroup.add(pumpBase);
-        
-        // Pump handle
-        const handleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 16);
-        const handleMaterial = new THREE.MeshPhongMaterial({ color: 0xff1493 });
-        const pumpHandle = new THREE.Mesh(handleGeometry, handleMaterial);
-        pumpHandle.position.y = -0.8;
-        pumpGroup.add(pumpHandle);
-        
-        // Pump top
-        const pumpTopGeometry = new THREE.SphereGeometry(0.2, 16, 16);
-        const pumpTopMaterial = new THREE.MeshPhongMaterial({ color: 0xffc0cb });
-        const pumpTop = new THREE.Mesh(pumpTopGeometry, pumpTopMaterial);
-        pumpTop.position.y = 0;
+        const pumpRedMaterial = new THREE.MeshPhongMaterial({ color: 0xd94b3d, shininess: 70 });
+        const pumpDarkRedMaterial = new THREE.MeshPhongMaterial({ color: 0xb23b30, shininess: 50 });
+        const pumpMetalMaterial = new THREE.MeshPhongMaterial({ color: 0xbfc7d1, shininess: 120 });
+        const pumpRubberMaterial = new THREE.MeshPhongMaterial({ color: 0x1f1f1f, shininess: 10 });
+        const pumpWoodMaterial = new THREE.MeshPhongMaterial({ color: 0xc28b58, shininess: 30 });
+
+        // Pump base plate
+        const basePlateGeometry = new THREE.CylinderGeometry(0.45, 0.45, 0.08, 32);
+        const basePlate = new THREE.Mesh(basePlateGeometry, pumpRubberMaterial);
+        basePlate.position.y = -2.05;
+        pumpGroup.add(basePlate);
+
+        // Foot pedal
+        const footGeometry = new THREE.BoxGeometry(0.7, 0.08, 0.25);
+        const foot = new THREE.Mesh(footGeometry, pumpRubberMaterial);
+        foot.position.set(0, -2.02, 0.22);
+        pumpGroup.add(foot);
+
+        // Pump body
+        const pumpBodyGeometry = new THREE.CylinderGeometry(0.25, 0.28, 1.6, 32);
+        const pumpBody = new THREE.Mesh(pumpBodyGeometry, pumpRedMaterial);
+        pumpBody.position.y = -1.2;
+        pumpGroup.add(pumpBody);
+
+        // Pump body ring
+        const bodyRingGeometry = new THREE.TorusGeometry(0.27, 0.03, 12, 32);
+        const bodyRing = new THREE.Mesh(bodyRingGeometry, pumpDarkRedMaterial);
+        bodyRing.rotation.x = Math.PI / 2;
+        bodyRing.position.y = -0.45;
+        pumpGroup.add(bodyRing);
+
+        // Pump top cap
+        const pumpTopGeometry = new THREE.CylinderGeometry(0.22, 0.24, 0.18, 24);
+        const pumpTop = new THREE.Mesh(pumpTopGeometry, pumpDarkRedMaterial);
+        pumpTop.position.y = -0.35;
         pumpGroup.add(pumpTop);
-        
+
+        // Pump handle group (moves)
+        const pumpHandle = new THREE.Group();
+
+        const shaftGeometry = new THREE.CylinderGeometry(0.08, 0.08, 1.7, 20);
+        const shaft = new THREE.Mesh(shaftGeometry, pumpMetalMaterial);
+        shaft.position.y = 0.35;
+        pumpHandle.add(shaft);
+
+        const gripGeometry = new THREE.CylinderGeometry(0.12, 0.12, 0.8, 16);
+        const grip = new THREE.Mesh(gripGeometry, pumpWoodMaterial);
+        grip.rotation.z = Math.PI / 2;
+        grip.position.y = 1.25;
+        pumpHandle.add(grip);
+
+        const gripEndGeometry = new THREE.SphereGeometry(0.12, 16, 16);
+        const gripLeft = new THREE.Mesh(gripEndGeometry, pumpWoodMaterial);
+        gripLeft.position.set(-0.4, 1.25, 0);
+        pumpHandle.add(gripLeft);
+
+        const gripRight = new THREE.Mesh(gripEndGeometry, pumpWoodMaterial);
+        gripRight.position.set(0.4, 1.25, 0);
+        pumpHandle.add(gripRight);
+
+        pumpHandle.position.y = -1.0;
+        pumpGroup.add(pumpHandle);
+
         // Pump nozzle
-        const nozzleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 12);
-        const nozzleMaterial = new THREE.MeshPhongMaterial({ color: 0xff69b4 });
-        const nozzle = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+        const nozzleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.45, 12);
+        const nozzle = new THREE.Mesh(nozzleGeometry, pumpMetalMaterial);
         nozzle.rotation.z = Math.PI / 2;
-        nozzle.position.set(0.4, -1.6, 0);
+        nozzle.position.set(0.42, -1.65, 0);
         pumpGroup.add(nozzle);
 
         pumpGroup.position.set(3.2, -0.2, 0.8);
@@ -380,6 +480,54 @@
 
         const raycaster = new THREE.Raycaster();
         const mouse = new THREE.Vector2();
+        const hintText = document.getElementById('hint-text');
+        const yesButton = document.getElementById('yes-button');
+        const noButton = document.getElementById('no-button');
+        const photoPop = document.getElementById('photo-pop');
+        const confettiLayer = document.getElementById('confetti-layer');
+        const originalHintText = 'Bitte pumpe das Herz auf, damit der Panda glücklich ist';
+
+        function moveNoButton() {
+            const rect = noButton.getBoundingClientRect();
+            const padding = 16;
+            const minX = padding - rect.left;
+            const maxX = window.innerWidth - rect.right - padding;
+            const minY = padding - rect.top;
+            const maxY = window.innerHeight - rect.bottom - padding;
+            const rangeX = maxX - minX;
+            const rangeY = maxY - minY;
+            const offsetX = rangeX <= 0 ? 0 : Math.random() * rangeX + minX;
+            const offsetY = rangeY <= 0 ? 0 : Math.random() * rangeY + minY;
+
+            noButton.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        }
+
+        function launchConfetti() {
+            const colors = ['#ff6f9f', '#ffd166', '#f25c54', '#9bdeac', '#8ecae6'];
+            const pieces = 45;
+
+            for (let i = 0; i < pieces; i++) {
+                const piece = document.createElement('div');
+                piece.className = 'confetti-piece';
+                piece.style.left = `${Math.random() * 100}vw`;
+                piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDuration = `${2 + Math.random() * 1.2}s`;
+                piece.style.transform = `translateY(-10px) rotate(${Math.random() * 180}deg)`;
+                confettiLayer.appendChild(piece);
+
+                piece.addEventListener('animationend', () => {
+                    piece.remove();
+                });
+            }
+        }
+
+        yesButton.addEventListener('click', () => {
+            hintText.textContent = originalHintText;
+        });
+
+        noButton.addEventListener('mouseenter', moveNoButton);
+        noButton.addEventListener('focus', moveNoButton);
+        noButton.addEventListener('touchstart', moveNoButton);
 
         function onPumpClick(event) {
             if (completed || isAnimating) return;
@@ -452,6 +600,8 @@
             
             // Particle effects
             createParticles();
+            photoPop.classList.add('show');
+            launchConfetti();
             
             // Panda jump
             let pandaJump = 0;
