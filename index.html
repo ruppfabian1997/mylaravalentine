@@ -35,6 +35,14 @@
             z-index: 10;
             pointer-events: none;
         }
+        #hint {
+            position: absolute;
+            top: 140px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+        }
         .pump {
             cursor: pointer;
             transition: transform 0.1s;
@@ -73,7 +81,7 @@
     <div id="canvas-container"></div>
     <div id="title">
         <h1 class="text-4xl md:text-6xl font-bold text-pink-600 drop-shadow-lg">
-            Willkommen im Valentinstags-Zoo 🐼💕
+            Willkommen in Lara's Valentinstags-Zoo 🐼💕
         </h1>
     </div>
     <div id="counter">
@@ -81,11 +89,16 @@
             Klicks: <span id="click-count">0</span> / 15
         </p>
     </div>
+    <div id="hint">
+        <p class="text-lg md:text-xl font-bold text-pink-600 bg-white bg-opacity-70 px-5 py-2 rounded-full shadow-lg">
+            Bitte pumpe das Herz auf, damit der Panda glücklich ist
+        </p>
+    </div>
 
     <script>
         // Scene setup
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xffeef8);
+        scene.background = new THREE.Color(0xcfefff);
         
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.z = 8;
@@ -102,6 +115,92 @@
         const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
         directionalLight.position.set(5, 5, 5);
         scene.add(directionalLight);
+
+        // Create Zoo environment
+        const groundGeometry = new THREE.PlaneGeometry(50, 50);
+        const groundMaterial = new THREE.MeshPhongMaterial({ color: 0x88c96b });
+        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -1.2;
+        scene.add(ground);
+
+        const pathGeometry = new THREE.PlaneGeometry(16, 6);
+        const pathMaterial = new THREE.MeshPhongMaterial({ color: 0xe7c59c });
+        const path = new THREE.Mesh(pathGeometry, pathMaterial);
+        path.rotation.x = -Math.PI / 2;
+        path.position.set(0, -1.18, 4);
+        scene.add(path);
+
+        const fenceGroup = new THREE.Group();
+        const postGeometry = new THREE.BoxGeometry(0.15, 1.2, 0.15);
+        const railGeometry = new THREE.BoxGeometry(8, 0.12, 0.12);
+        const fenceMaterial = new THREE.MeshPhongMaterial({ color: 0xd6a16a });
+
+        for (let i = -4; i <= 4; i++) {
+            const post = new THREE.Mesh(postGeometry, fenceMaterial);
+            post.position.set(i * 1, -0.6, -4);
+            fenceGroup.add(post);
+        }
+
+        const topRail = new THREE.Mesh(railGeometry, fenceMaterial);
+        topRail.position.set(0, -0.2, -4);
+        fenceGroup.add(topRail);
+
+        const midRail = new THREE.Mesh(railGeometry, fenceMaterial);
+        midRail.position.set(0, -0.6, -4);
+        fenceGroup.add(midRail);
+
+        scene.add(fenceGroup);
+
+        const treeGroup = new THREE.Group();
+        const trunkGeometry = new THREE.CylinderGeometry(0.15, 0.2, 1.2, 12);
+        const trunkMaterial = new THREE.MeshPhongMaterial({ color: 0x8b5a2b });
+        const leavesGeometry = new THREE.SphereGeometry(0.6, 16, 16);
+        const leavesMaterial = new THREE.MeshPhongMaterial({ color: 0x4caf50 });
+
+        const treePositions = [
+            new THREE.Vector3(-6, -0.2, -2),
+            new THREE.Vector3(6, -0.2, -1),
+            new THREE.Vector3(-7, -0.2, 3)
+        ];
+
+        treePositions.forEach((pos) => {
+            const trunk = new THREE.Mesh(trunkGeometry, trunkMaterial);
+            trunk.position.set(pos.x, pos.y, pos.z);
+            treeGroup.add(trunk);
+
+            const leaves = new THREE.Mesh(leavesGeometry, leavesMaterial);
+            leaves.position.set(pos.x, pos.y + 0.8, pos.z);
+            treeGroup.add(leaves);
+        });
+
+        scene.add(treeGroup);
+
+        const cloudGroup = new THREE.Group();
+        const cloudMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        const cloudPositions = [
+            new THREE.Vector3(-4, 4, -6),
+            new THREE.Vector3(3, 4.5, -5),
+            new THREE.Vector3(7, 3.8, -7)
+        ];
+
+        cloudPositions.forEach((pos) => {
+            const puff1 = new THREE.Mesh(new THREE.SphereGeometry(0.6, 12, 12), cloudMaterial);
+            const puff2 = new THREE.Mesh(new THREE.SphereGeometry(0.8, 12, 12), cloudMaterial);
+            const puff3 = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), cloudMaterial);
+            puff1.position.set(pos.x, pos.y, pos.z);
+            puff2.position.set(pos.x + 0.7, pos.y + 0.1, pos.z + 0.2);
+            puff3.position.set(pos.x - 0.7, pos.y - 0.1, pos.z - 0.1);
+            cloudGroup.add(puff1, puff2, puff3);
+        });
+
+        scene.add(cloudGroup);
+
+        const sunGeometry = new THREE.SphereGeometry(0.9, 16, 16);
+        const sunMaterial = new THREE.MeshPhongMaterial({ color: 0xfff4a3, emissive: 0xfff4a3, emissiveIntensity: 0.6 });
+        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+        sun.position.set(-7, 5, -8);
+        scene.add(sun);
 
         // Create Panda
         const pandaGroup = new THREE.Group();
@@ -144,7 +243,7 @@
         rightEyePatch.scale.set(1, 1.2, 0.5);
         pandaGroup.add(rightEyePatch);
         
-        // Sad eyes (will change to happy)
+        // Panda eyes
         const eyeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
         const eyeGeometry = new THREE.SphereGeometry(0.08, 16, 16);
         
@@ -156,16 +255,31 @@
         rightEye.position.set(0.25, 1.55, 0.65);
         pandaGroup.add(rightEye);
         
-        // Sad mouth (curved down)
-        const mouthCurve = new THREE.QuadraticBezierCurve3(
-            new THREE.Vector3(-0.15, 1.3, 0.65),
-            new THREE.Vector3(0, 1.2, 0.7),
-            new THREE.Vector3(0.15, 1.3, 0.65)
-        );
-        const mouthPoints = mouthCurve.getPoints(20);
-        const mouthGeometry = new THREE.BufferGeometry().setFromPoints(mouthPoints);
         const mouthMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 });
-        const mouthLine = new THREE.Line(mouthGeometry, mouthMaterial);
+
+        function createHappyMouth() {
+            const mouthCurve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(-0.15, 1.25, 0.65),
+                new THREE.Vector3(0, 1.35, 0.7),
+                new THREE.Vector3(0.15, 1.25, 0.65)
+            );
+            const mouthPoints = mouthCurve.getPoints(20);
+            const mouthGeometry = new THREE.BufferGeometry().setFromPoints(mouthPoints);
+            return new THREE.Line(mouthGeometry, mouthMaterial);
+        }
+
+        function createSadMouth() {
+            const mouthCurve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(-0.15, 1.3, 0.65),
+                new THREE.Vector3(0, 1.2, 0.7),
+                new THREE.Vector3(0.15, 1.3, 0.65)
+            );
+            const mouthPoints = mouthCurve.getPoints(20);
+            const mouthGeometry = new THREE.BufferGeometry().setFromPoints(mouthPoints);
+            return new THREE.Line(mouthGeometry, mouthMaterial);
+        }
+
+        let mouthLine = createHappyMouth();
         pandaGroup.add(mouthLine);
         
         // Panda nose
@@ -229,8 +343,34 @@
         pumpTop.position.y = 0;
         pumpGroup.add(pumpTop);
         
-        pumpGroup.position.set(2, 0, 2);
+        // Pump nozzle
+        const nozzleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.4, 12);
+        const nozzleMaterial = new THREE.MeshPhongMaterial({ color: 0xff69b4 });
+        const nozzle = new THREE.Mesh(nozzleGeometry, nozzleMaterial);
+        nozzle.rotation.z = Math.PI / 2;
+        nozzle.position.set(0.4, -1.6, 0);
+        pumpGroup.add(nozzle);
+
+        pumpGroup.position.set(3.2, -0.2, 0.8);
         scene.add(pumpGroup);
+
+        // Hose connecting pump to heart
+        const hoseCurve = new THREE.CatmullRomCurve3([
+            new THREE.Vector3(3.6, -1.8, 0.8),
+            new THREE.Vector3(3.0, -1.4, 0.4),
+            new THREE.Vector3(2.6, -0.6, 0.2),
+            new THREE.Vector3(2.3, -0.2, 0.1)
+        ]);
+        const hoseGeometry = new THREE.TubeGeometry(hoseCurve, 40, 0.06, 10, false);
+        const hoseMaterial = new THREE.MeshPhongMaterial({ color: 0xff6f9f });
+        const hose = new THREE.Mesh(hoseGeometry, hoseMaterial);
+        scene.add(hose);
+
+        const heartConnectorGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.3, 12);
+        const heartConnector = new THREE.Mesh(heartConnectorGeometry, hoseMaterial);
+        heartConnector.rotation.z = Math.PI / 2;
+        heartConnector.position.set(2.35, -0.15, 0.1);
+        scene.add(heartConnector);
 
         // Click interaction
         let clickCount = 0;
@@ -305,19 +445,10 @@
             
             setTimeout(() => clearInterval(heartFloatInterval), 3000);
             
-            // Make panda happy
+            // Make panda sad
             pandaGroup.remove(mouthLine);
-            
-            // Happy mouth (curved up)
-            const happyMouthCurve = new THREE.QuadraticBezierCurve3(
-                new THREE.Vector3(-0.15, 1.25, 0.65),
-                new THREE.Vector3(0, 1.35, 0.7),
-                new THREE.Vector3(0.15, 1.25, 0.65)
-            );
-            const happyMouthPoints = happyMouthCurve.getPoints(20);
-            const happyMouthGeometry = new THREE.BufferGeometry().setFromPoints(happyMouthPoints);
-            const happyMouthLine = new THREE.Line(happyMouthGeometry, mouthMaterial);
-            pandaGroup.add(happyMouthLine);
+            mouthLine = createSadMouth();
+            pandaGroup.add(mouthLine);
             
             // Particle effects
             createParticles();
