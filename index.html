@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Willkommen im Valentinstags-Zoo 💝</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            background: linear-gradient(135deg, #ffeef8 0%, #ffe4f1 50%, #ffd6e8 100%);
+        }
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        #title {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            text-align: center;
+            pointer-events: none;
+        }
+        #counter {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            pointer-events: none;
+        }
+        .pump {
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .pump:hover {
+            transform: scale(1.1);
+        }
+        .pump:active {
+            transform: scale(0.95);
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particle-float 2s ease-out forwards;
+        }
+        @keyframes particle-float {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <div id="title">
+        <h1 class="text-4xl md:text-6xl font-bold text-pink-600 drop-shadow-lg">
+            Willkommen im Valentinstags-Zoo 🐼💕
+        </h1>
+    </div>
+    <div id="counter">
+        <p class="text-2xl md:text-3xl font-bold text-pink-500 bg-white bg-opacity-70 px-6 py-2 rounded-full shadow-lg">
+            Klicks: <span id="click-count">0</span> / 15
+        </p>
+    </div>
+
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffeef8);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 8;
+        camera.position.y = 1;
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 5, 5);
+        scene.add(directionalLight);
+
+        // Create Panda
+        const pandaGroup = new THREE.Group();
+        
+        // Panda body
+        const bodyGeometry = new THREE.SphereGeometry(1, 32, 32);
+        const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0xf5f5f5 });
+        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+        body.scale.set(1, 1.2, 1);
+        pandaGroup.add(body);
+        
+        // Panda head
+        const headGeometry = new THREE.SphereGeometry(0.7, 32, 32);
+        const head = new THREE.Mesh(headGeometry, bodyMaterial);
+        head.position.y = 1.5;
+        pandaGroup.add(head);
+        
+        // Panda ears (black)
+        const earMaterial = new THREE.MeshPhongMaterial({ color: 0x000000 });
+        const earGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+        
+        const leftEar = new THREE.Mesh(earGeometry, earMaterial);
+        leftEar.position.set(-0.5, 2, 0);
+        pandaGroup.add(leftEar);
+        
+        const rightEar = new THREE.Mesh(earGeometry, earMaterial);
+        rightEar.position.set(0.5, 2, 0);
+        pandaGroup.add(rightEar);
+        
+        // Panda eyes (black patches)
+        const eyePatchGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+        
+        const leftEyePatch = new THREE.Mesh(eyePatchGeometry, earMaterial);
+        leftEyePatch.position.set(-0.25, 1.6, 0.6);
+        leftEyePatch.scale.set(1, 1.2, 0.5);
+        pandaGroup.add(leftEyePatch);
+        
+        const rightEyePatch = new THREE.Mesh(eyePatchGeometry, earMaterial);
+        rightEyePatch.position.set(0.25, 1.6, 0.6);
+        rightEyePatch.scale.set(1, 1.2, 0.5);
+        pandaGroup.add(rightEyePatch);
+        
+        // Sad eyes (will change to happy)
+        const eyeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+        const eyeGeometry = new THREE.SphereGeometry(0.08, 16, 16);
+        
+        const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        leftEye.position.set(-0.25, 1.55, 0.65);
+        pandaGroup.add(leftEye);
+        
+        const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+        rightEye.position.set(0.25, 1.55, 0.65);
+        pandaGroup.add(rightEye);
+        
+        // Sad mouth (curved down)
+        const mouthCurve = new THREE.QuadraticBezierCurve3(
+            new THREE.Vector3(-0.15, 1.3, 0.65),
+            new THREE.Vector3(0, 1.2, 0.7),
+            new THREE.Vector3(0.15, 1.3, 0.65)
+        );
+        const mouthPoints = mouthCurve.getPoints(20);
+        const mouthGeometry = new THREE.BufferGeometry().setFromPoints(mouthPoints);
+        const mouthMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 3 });
+        const mouthLine = new THREE.Line(mouthGeometry, mouthMaterial);
+        pandaGroup.add(mouthLine);
+        
+        // Panda nose
+        const noseGeometry = new THREE.SphereGeometry(0.1, 16, 16);
+        const nose = new THREE.Mesh(noseGeometry, earMaterial);
+        nose.position.set(0, 1.4, 0.7);
+        nose.scale.set(0.8, 0.6, 0.5);
+        pandaGroup.add(nose);
+        
+        pandaGroup.position.set(-3, 0, 0);
+        scene.add(pandaGroup);
+
+        // Create collapsed Heart
+        const heartShape = new THREE.Shape();
+        heartShape.moveTo(0, 0);
+        heartShape.bezierCurveTo(0, -0.3, -0.6, -0.3, -0.6, 0);
+        heartShape.bezierCurveTo(-0.6, 0.3, 0, 0.8, 0, 1);
+        heartShape.bezierCurveTo(0, 0.8, 0.6, 0.3, 0.6, 0);
+        heartShape.bezierCurveTo(0.6, -0.3, 0, -0.3, 0, 0);
+        
+        const extrudeSettings = {
+            depth: 0.3,
+            bevelEnabled: true,
+            bevelThickness: 0.1,
+            bevelSize: 0.1,
+            bevelSegments: 5
+        };
+        
+        const heartGeometry = new THREE.ExtrudeGeometry(heartShape, extrudeSettings);
+        const heartMaterial = new THREE.MeshPhongMaterial({ 
+            color: 0xffb3d9,
+            shininess: 50
+        });
+        const heart = new THREE.Mesh(heartGeometry, heartMaterial);
+        heart.position.set(2, 0, 0);
+        heart.rotation.z = Math.PI;
+        heart.scale.set(0.5, 0.3, 0.5); // Collapsed state
+        scene.add(heart);
+
+        // Create Pump
+        const pumpGroup = new THREE.Group();
+        
+        // Pump base
+        const pumpBaseGeometry = new THREE.CylinderGeometry(0.3, 0.3, 0.4, 32);
+        const pumpBaseMaterial = new THREE.MeshPhongMaterial({ color: 0xff69b4 });
+        const pumpBase = new THREE.Mesh(pumpBaseGeometry, pumpBaseMaterial);
+        pumpBase.position.y = -1.8;
+        pumpGroup.add(pumpBase);
+        
+        // Pump handle
+        const handleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 16);
+        const handleMaterial = new THREE.MeshPhongMaterial({ color: 0xff1493 });
+        const pumpHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        pumpHandle.position.y = -0.8;
+        pumpGroup.add(pumpHandle);
+        
+        // Pump top
+        const pumpTopGeometry = new THREE.SphereGeometry(0.2, 16, 16);
+        const pumpTopMaterial = new THREE.MeshPhongMaterial({ color: 0xffc0cb });
+        const pumpTop = new THREE.Mesh(pumpTopGeometry, pumpTopMaterial);
+        pumpTop.position.y = 0;
+        pumpGroup.add(pumpTop);
+        
+        pumpGroup.position.set(2, 0, 2);
+        scene.add(pumpGroup);
+
+        // Click interaction
+        let clickCount = 0;
+        const maxClicks = 15;
+        let isAnimating = false;
+        let completed = false;
+
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+
+        function onPumpClick(event) {
+            if (completed || isAnimating) return;
+            
+            // Calculate mouse position
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(pumpGroup.children);
+            
+            if (intersects.length > 0) {
+                clickCount++;
+                document.getElementById('click-count').textContent = clickCount;
+                
+                // Animate pump
+                animatePump();
+                
+                // Grow heart
+                const scale = 0.5 + (clickCount / maxClicks) * 1.5;
+                const scaleY = 0.3 + (clickCount / maxClicks) * 1.7;
+                heart.scale.set(scale, scaleY, scale);
+                
+                // Change heart color as it grows
+                const hue = 0.92 - (clickCount / maxClicks) * 0.05;
+                heart.material.color.setHSL(hue, 0.8, 0.7);
+                
+                if (clickCount >= maxClicks) {
+                    completeAnimation();
+                }
+            }
+        }
+
+        function animatePump() {
+            isAnimating = true;
+            const originalY = pumpHandle.position.y;
+            
+            // Pump down
+            gsap.to(pumpHandle.position, {
+                y: originalY - 0.3,
+                duration: 0.1,
+                onComplete: () => {
+                    // Pump up
+                    gsap.to(pumpHandle.position, {
+                        y: originalY,
+                        duration: 0.1,
+                        onComplete: () => {
+                            isAnimating = false;
+                        }
+                    });
+                }
+            });
+        }
+
+        function completeAnimation() {
+            completed = true;
+            
+            // Float heart up
+            const heartFloatInterval = setInterval(() => {
+                heart.position.y += 0.02;
+                heart.rotation.y += 0.02;
+            }, 16);
+            
+            setTimeout(() => clearInterval(heartFloatInterval), 3000);
+            
+            // Make panda happy
+            pandaGroup.remove(mouthLine);
+            
+            // Happy mouth (curved up)
+            const happyMouthCurve = new THREE.QuadraticBezierCurve3(
+                new THREE.Vector3(-0.15, 1.25, 0.65),
+                new THREE.Vector3(0, 1.35, 0.7),
+                new THREE.Vector3(0.15, 1.25, 0.65)
+            );
+            const happyMouthPoints = happyMouthCurve.getPoints(20);
+            const happyMouthGeometry = new THREE.BufferGeometry().setFromPoints(happyMouthPoints);
+            const happyMouthLine = new THREE.Line(happyMouthGeometry, mouthMaterial);
+            pandaGroup.add(happyMouthLine);
+            
+            // Particle effects
+            createParticles();
+            
+            // Panda jump
+            let pandaJump = 0;
+            const pandaJumpInterval = setInterval(() => {
+                pandaJump += 0.1;
+                pandaGroup.position.y = Math.sin(pandaJump) * 0.3;
+            }, 50);
+            
+            setTimeout(() => {
+                clearInterval(pandaJumpInterval);
+                pandaGroup.position.y = 0;
+            }, 2000);
+        }
+
+        function createParticles() {
+            const colors = [0xffb3d9, 0xffc0cb, 0xff69b4, 0xffd700, 0xff1493];
+            
+            for (let i = 0; i < 50; i++) {
+                setTimeout(() => {
+                    const particleGeometry = new THREE.SphereGeometry(0.05, 8, 8);
+                    const particleMaterial = new THREE.MeshPhongMaterial({ 
+                        color: colors[Math.floor(Math.random() * colors.length)]
+                    });
+                    const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+                    
+                    particle.position.set(
+                        heart.position.x + (Math.random() - 0.5) * 2,
+                        heart.position.y + (Math.random() - 0.5) * 2,
+                        heart.position.z + (Math.random() - 0.5) * 2
+                    );
+                    
+                    scene.add(particle);
+                    
+                    // Animate particle
+                    const tx = (Math.random() - 0.5) * 5;
+                    const ty = (Math.random() - 0.5) * 5;
+                    const tz = (Math.random() - 0.5) * 5;
+                    
+                    const particleInterval = setInterval(() => {
+                        particle.position.x += tx * 0.02;
+                        particle.position.y += ty * 0.02;
+                        particle.position.z += tz * 0.02;
+                        particle.scale.multiplyScalar(0.95);
+                    }, 16);
+                    
+                    setTimeout(() => {
+                        clearInterval(particleInterval);
+                        scene.remove(particle);
+                    }, 2000);
+                }, i * 40);
+            }
+        }
+
+        // Simple animation library (GSAP-like)
+        const gsap = {
+            to: (target, options) => {
+                const startValues = {};
+                for (let key in options) {
+                    if (key !== 'duration' && key !== 'onComplete' && typeof options[key] === 'number') {
+                        startValues[key] = target[key];
+                    }
+                }
+                
+                const startTime = Date.now();
+                const duration = (options.duration || 1) * 1000;
+                
+                const animate = () => {
+                    const elapsed = Date.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    for (let key in options) {
+                        if (key !== 'duration' && key !== 'onComplete' && typeof options[key] === 'number') {
+                            target[key] = startValues[key] + (options[key] - startValues[key]) * progress;
+                        }
+                    }
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else if (options.onComplete) {
+                        options.onComplete();
+                    }
+                };
+                
+                animate();
+            }
+        };
+
+        // Event listeners
+        window.addEventListener('click', onPumpClick);
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Gentle rotation
+            if (!completed) {
+                heart.rotation.y += 0.005;
+                pandaGroup.rotation.y = Math.sin(Date.now() * 0.001) * 0.1;
+            }
+            
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
