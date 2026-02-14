@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Willkommen im Valentinstags-Zoo 💝</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <style>
         body {
             margin: 0;
@@ -218,9 +218,9 @@
         // Pump handle
         const handleGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1.5, 16);
         const handleMaterial = new THREE.MeshPhongMaterial({ color: 0xff1493 });
-        const handle = new THREE.Mesh(handleGeometry, handleMaterial);
-        handle.position.y = -0.8;
-        pumpGroup.add(handle);
+        const pumpHandle = new THREE.Mesh(handleGeometry, handleMaterial);
+        pumpHandle.position.y = -0.8;
+        pumpGroup.add(pumpHandle);
         
         // Pump top
         const pumpTopGeometry = new THREE.SphereGeometry(0.2, 16, 16);
@@ -275,15 +275,15 @@
 
         function animatePump() {
             isAnimating = true;
-            const originalY = pumpGroup.children[1].position.y;
+            const originalY = pumpHandle.position.y;
             
             // Pump down
-            gsap.to(pumpGroup.children[1].position, {
+            gsap.to(pumpHandle.position, {
                 y: originalY - 0.3,
                 duration: 0.1,
                 onComplete: () => {
                     // Pump up
-                    gsap.to(pumpGroup.children[1].position, {
+                    gsap.to(pumpHandle.position, {
                         y: originalY,
                         duration: 0.1,
                         onComplete: () => {
@@ -377,7 +377,13 @@
         // Simple animation library (GSAP-like)
         const gsap = {
             to: (target, options) => {
-                const start = { ...target };
+                const startValues = {};
+                for (let key in options) {
+                    if (key !== 'duration' && key !== 'onComplete' && typeof options[key] === 'number') {
+                        startValues[key] = target[key];
+                    }
+                }
+                
                 const startTime = Date.now();
                 const duration = (options.duration || 1) * 1000;
                 
@@ -387,7 +393,7 @@
                     
                     for (let key in options) {
                         if (key !== 'duration' && key !== 'onComplete' && typeof options[key] === 'number') {
-                            target[key] = start[key] + (options[key] - start[key]) * progress;
+                            target[key] = startValues[key] + (options[key] - startValues[key]) * progress;
                         }
                     }
                     
